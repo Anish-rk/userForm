@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Form Document</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="d-flex justify-content-center align-items-center vh-100 bg-light">
+  <div class="card shadow p-4 w-100" style="max-width: 600px;">
+    <h4 class="mb-4 text-center">Form Document</h4>
+
+    <form id="myForm" novalidate>
+      <input type="hidden" id="userId" />
+      <div class="row mb-3">
+        <label for="firstName" class="col-sm-4 col-form-label">First Name</label>
+        <div class="col-sm-8">
+          <input type="text" id="firstName" class="form-control" required />
+          <div class="invalid-feedback" id="firstNameError"></div>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <label for="lastName" class="col-sm-4 col-form-label">Last Name</label>
+        <div class="col-sm-8">
+          <input type="text" id="lastName" class="form-control" required />
+          <div class="invalid-feedback" id="lastNameError"></div>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <label for="email" class="col-sm-4 col-form-label">Email</label>
+        <div class="col-sm-8">
+          <input type="email" id="email" class="form-control" required />
+          <div class="invalid-feedback" id="emailError"></div>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <label for="phone" class="col-sm-4 col-form-label">Phone</label>
+        <div class="col-sm-8">
+          <input type="tel" id="phone" class="form-control" maxlength="10" required />
+          <div class="invalid-feedback" id="phoneError"></div>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <label for="city" class="col-sm-4 col-form-label">City</label>
+        <div class="col-sm-8">
+          <input type="text" id="city" class="form-control" required />
+          <div class="invalid-feedback" id="cityError"></div>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <label for="zipCode" class="col-sm-4 col-form-label">Zip Code</label>
+        <div class="col-sm-8">
+          <input type="text" id="zipCode" class="form-control" maxlength="6" required />
+          <div class="invalid-feedback" id="zipCodeError"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <button type="submit" class="btn btn-primary w-100">Submit</button>
+        </div>
+        <div class="col">
+          <button type="reset" class="btn btn-secondary w-100">Reset</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const fields = ['firstName', 'lastName', 'email', 'phone', 'city', 'zipCode'];
+    const form = document.getElementById('myForm');
+    const userIdEl = document.getElementById('userId');
+
+    const inputEls = {};
+    const errorEls = {};
+
+    fields.forEach(field => {
+      inputEls[field] = document.getElementById(field);
+      errorEls[field] = document.getElementById(field + 'Error');
+    });
+
+    const validators = {
+      firstName: val => val.trim() === '' ? 'Please enter the first name.' :
+        val.trim().length < 3 ? 'Type at least 3 characters.' : '',
+
+      lastName: val => val.trim() === '' ? 'Please enter the last name.' :
+        val.trim().length < 1 ? 'Type at least 1 character.' : '',
+
+      email: val => val.trim() === '' ? 'Please enter the email.' :
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim()) ? 'Invalid email format.' : '',
+
+      phone: val => val.trim() === '' ? 'Please enter the phone number.' :
+        !/^\d{10}$/.test(val.trim()) ? 'Phone must be 10 digits.' : '',
+
+      city: val => val.trim() === '' ? 'Please enter the city.' :
+        val.trim().length < 3 ? 'Type at least 3 characters.' : '',
+
+      zipCode: val => val.trim() === '' ? 'Please enter the zip code.' :
+        !/^\d{6}$/.test(val.trim()) ? 'Zip must be 6 digits.' : ''
+    };
+
+    fields.forEach(field => {
+      inputEls[field].addEventListener('input', () => validateField(field));
+    });
+
+    function validateField(field) {
+      const value = inputEls[field].value;
+      const error = validators[field](value);
+      if (error) {
+        inputEls[field].classList.add('is-invalid');
+        errorEls[field].textContent = error;
+      } else {
+        inputEls[field].classList.remove('is-invalid');
+        errorEls[field].textContent = '';
+      }
+      return !error;
+    }
+
+    ['phone', 'zipCode'].forEach(field => {
+      inputEls[field].addEventListener('input', () => {
+        inputEls[field].value = inputEls[field].value.replace(/\D/g, '');
+      });
+    });
+
+    async function loadUser(id) {
+      try {
+        const res = await fetch(`/api/users/${id}`);
+        if (!res.ok) throw new Error('User not found');
+        const user = await res.json();
+
+        userIdEl.value = user.id;
+        fields.forEach(field => {
+          inputEls[field].value = user[field] || '';
+          validateField(field);
+        });
+      } catch (err) {
+        alert('Failed to load user data.');
+        window.location.href = 'list.html';
+      }
+    }
+
+  
+    const params = new URLSearchParams(window.location.search);
+    const editId = params.get('id');
+    if (editId) {
+      loadUser(editId);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      let valid = true;
+      fields.forEach(field => {
+        if (!validateField(field)) valid = false;
+      });
+      if (!valid) return;
+
+      const userData = {
+        ...(userIdEl.value && { id: parseInt(userIdEl.value, 10) }),
+        firstName: inputEls.firstName.value.trim(),
+        lastName: inputEls.lastName.value.trim(),
+        email: inputEls.email.value.trim(),
+        phone: inputEls.phone.value.trim(),
+        city: inputEls.city.value.trim(),
+        zipCode: inputEls.zipCode.value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData)
+        });
+        if (!res.ok) throw new Error('Submit failed');
+        const data = await res.json();
+        alert(data.message);
+        window.location.href = 'list.html';
+      } catch (err) {
+        console.error(err);
+        alert('Failed to submit data.');
+      }
+    });
+
+    form.addEventListener('reset', () => {
+      fields.forEach(field => {
+        inputEls[field].classList.remove('is-invalid');
+        errorEls[field].textContent = '';
+      });
+      userIdEl.value = '';
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
